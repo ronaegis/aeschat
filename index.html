@@ -1,0 +1,249 @@
+<head>
+  <title>AESchat - Simple and secure encrypted chat</title>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+  <style type="text/css">
+    body {
+      margin-top: 70px;
+    }
+    .jumbotron {
+      text-align: center;
+    }
+    #chat {
+      display: none;
+    }
+    #text_area {
+      color: black;
+      width: 100%;
+      height: 300px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background-color: white;
+      border: 1px solid;
+      padding: 1px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <a href="../" class="navbar-brand">AESchat - Simple and secure encrypted chat</a>
+      </div>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+          <a id="aboutlink" href="#" title="About">About</a>
+        </li>
+      </ul>
+
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div id="jumbotron" class="jumbotron" style="display:none;">
+      <p>About AESchat</p>
+      <pre>
+Features:
+- Fast and easy way to securely chat
+- End-to-end encryption
+- Encryption key derived from the room name
+- No message stored on the server
+- Webpage delivered over HTTPS/SSL
+- Single HTML file, source at <a href="https://github.com/ronaegis/aeschat">GitHub</a>, <a href="javascript:viewthesource()">view source</a>
+- Uses SHA256 and AES
+- Accessible from TOR (url)
+- Easy to generate link addresses
+</pre>
+      &copy; 2014 Christophe Thibault | <a href="">Contact</a>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+
+        <form id="logform" method="post" action="#" onsubmit="return doChat();">
+          Username:
+          <input name="username" autofocus>
+          <br>Room/Password:
+          <input name="room" value="default">
+          <input type="submit" value="Go">
+          <div class="alert alert-danger" id="login-error" style="display:none;">
+            <button type="button" class="close">x</button>
+            Username can't be empty!
+          </div>
+        </form>
+
+        <div id="chat">
+          <div id="text_area"></div>
+          <form id="chatform" method="post" action="#" onsubmit="return doSend();" autocomplete="off">
+            <input name="textline">
+            <input type="submit" value="Send">
+            <div id="link"></div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+  <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+  <script src="sha256.js"></script>
+  <script src="aes.js"></script>
+
+  <script type="text/javascript">
+    var user = "";
+    var chan = "";
+    var key = "";
+    var lastt = 0;
+
+    $('.alert .close').live("click", function (e)
+    {
+      $(this).parent().hide();
+    });
+    $('#aboutlink').click(function ()
+    {
+      $("#jumbotron").slideToggle();
+      return false;
+    });
+
+    function viewthesource()
+    {
+      window.location = "view-source:" + window.location;
+    }
+
+    function readCookie(name)
+    {
+      var nameEQ = escape(name) + "=";
+      var ca = document.cookie.split(';');
+      for (var i = 0; i < ca.length; i++)
+      {
+        var c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return unescape(c.substring(nameEQ.length, c.length));
+      }
+      return null;
+    }
+
+    function doChat()
+    {
+      user = document.getElementById("logform").username.value;
+      if (user == '')
+      {
+        $("#login-error").show();
+        return false;
+      }
+
+      document.cookie = "user=" + escape(user) + "; path=/";
+
+      var r = document.getElementById("logform").room.value;
+      var room = r + "AESchat!";
+      chan = CryptoJS.SHA256(room).toString(CryptoJS.enc.Hex);
+      key = CryptoJS.SHA256(room + chan).toString(CryptoJS.enc.Hex);
+
+      $('#link').replaceWith('<a href="#' + encodeURIComponent(r) + '">Link</a>');
+      $("#logform").hide();
+      $("#chat").show();
+
+      $('[name=textline]').focus();
+
+      doSendLine(user + " joined the room!");
+
+      setInterval(doUpdate, 500);
+
+      return false;
+    }
+    var isupdating = 0;
+
+    function doUpdate()
+    {
+      if (isupdating) return;
+      isupdating = 1;
+      $.ajax(
+      {
+        type: "POST",
+        url: "chat.php",
+        data:
+        {
+          function: 'get',
+          chan: chan,
+          t: lastt
+        },
+        dataType: "json",
+        success: function (data)
+        {
+          lastt = data.t;
+          var d = data.text;
+          if (!d) return;
+          var lines = d.split("\n");
+          var index;
+          for (index = 0; lines[index]; index++)
+          {
+            var d2 = lines[index].split(",");
+            if (!d2[1]) break;
+            var enc = d2[1].replace(/^\s+|\s+$/g, ''); //remove newlines
+            var decrypted = CryptoJS.AES.decrypt(enc, key).toString(CryptoJS.enc.Utf8);
+            var dt = new Date(d2[0] * 1000);
+            $('#text_area').append(dt.toLocaleTimeString() + '> ' + decrypted + '<br>');
+          }
+          $("#text_area").animate(
+          {
+            scrollTop: $('#text_area')[0].scrollHeight
+          }, 1000);
+        },
+        complete: function ()
+        {
+          isupdating = 0;
+        }
+      });
+    }
+
+    function doSendLine(line)
+    {
+      line = CryptoJS.AES.encrypt(line, key).toString();
+      $.ajax(
+      {
+        type: "POST",
+        url: "chat.php",
+        data:
+        {
+          function: 'post',
+          chan: chan,
+          line: line
+        },
+        dataType: "json",
+        success: function (data)
+        {
+          if (lastt == 0)
+            lastt = data.t;
+          doUpdate();
+        }
+      });
+    }
+
+    function doSend()
+    {
+      var line = $('[name=textline]').val();
+      if (line == '') return false;
+
+      line = user + ": " + line;
+
+      $('[name=textline]').val('');
+      doSendLine(line);
+
+      return false;
+    }
+
+    window.onload = function ()
+    {
+      var u = readCookie("user");
+      if (u) $('[name=username]').val(u);
+      var h = window.location.hash;
+      if (h != '')
+        $('[name=room]').val(h.substring(1));
+    };
+  </script>
+
+</body>
