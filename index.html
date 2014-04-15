@@ -1,3 +1,4 @@
+
 <head>
   <title>AESchat - Simple and secure encrypted chat</title>
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
@@ -18,9 +19,11 @@
       height: 300px;
       overflow-x: hidden;
       overflow-y: auto;
-      background-color: white;
-      border: 1px solid;
-      padding: 1px;
+      background-color: #ecf6ff;
+      border: 1px solid #ccc;
+      padding: 4px;
+      border-radius:10px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -52,11 +55,14 @@ Features:
 - No message stored on the server
 - Webpage delivered over HTTPS/SSL
 - Single HTML file, source at <a href="https://github.com/ronaegis/aeschat">GitHub</a>, <a href="javascript:viewthesource()">view source</a>
-- Uses SHA256 and AES
-- Accessible from TOR (url)
+- Uses <a href="http://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, <a href="http://en.wikipedia.org/wiki/SHA-2">SHA256</a> and <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a>
+- Accessible from <a href="https://www.torproject.org/">TOR</a> (url)
 - Easy to generate link addresses
 </pre>
-      &copy; 2014 Christophe Thibault | <a href="">Contact</a>
+<script type="text/javascript">
+	document.write("&pbcl; 2014 <n uers=\"znvygb:pguvonhyg@tznvy.pbz\" ery=\"absbyybj\">Puevfgbcur Guvonhyg</n>".replace(/[a-zA-Z]/g, 
+	function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26);}));
+</script>
     </div>
 
     <div class="row">
@@ -65,9 +71,9 @@ Features:
         <form id="logform" method="post" action="#" onsubmit="return doChat();">
           Username:
           <input name="username" autofocus>
-          <br>Room/Password:
+          <br>Room/Passphrase:
           <input name="room" value="default">
-          <input type="submit" value="Go">
+          <input id="gobutton" type="submit" value="Go">
           <div class="alert alert-danger" id="login-error" style="display:none;">
             <button type="button" class="close">x</button>
             Username can't be empty!
@@ -75,9 +81,9 @@ Features:
         </form>
 
         <div id="chat">
-          <div id="text_area"></div>
+          <div id="text_area" class="container"></div>
           <form id="chatform" method="post" action="#" onsubmit="return doSend();" autocomplete="off">
-            <input name="textline">
+            <input name="textline" class="form-control input-normal">
             <input type="submit" value="Send">
             <div id="link"></div>
           </form>
@@ -91,6 +97,7 @@ Features:
   <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
   <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
   <script src="sha256.js"></script>
+  <script src="bcrypt-min.js"></script>
   <script src="aes.js"></script>
 
   <script type="text/javascript">
@@ -98,6 +105,7 @@ Features:
     var chan = "";
     var key = "";
     var lastt = 0;
+    var bcrypt = new bCrypt();
 
     $('.alert .close').live("click", function (e)
     {
@@ -139,11 +147,23 @@ Features:
       document.cookie = "user=" + escape(user) + "; path=/";
 
       var r = document.getElementById("logform").room.value;
-      var room = r + "AESchat!";
-      chan = CryptoJS.SHA256(room).toString(CryptoJS.enc.Hex);
-      key = CryptoJS.SHA256(room + chan).toString(CryptoJS.enc.Hex);
-
       $('#link').replaceWith('<a href="#' + encodeURIComponent(r) + '">Link</a>');
+
+      var room = r + "AESchat!";
+
+    $('#gobutton').val("Computing encryption key, please wait...");
+    $('#gobutton').prop('disabled', true);
+
+var bcrypt = new bCrypt();
+bcrypt.hashpw(room, "$2a$10$0gP52fjilt.yQTzi0uY8xu", doChat2);
+return false;
+}
+
+function doChat2(bcrypthash)
+{
+      chan = CryptoJS.SHA256(bcrypthash).toString(CryptoJS.enc.Hex);
+      key = CryptoJS.SHA256(bcrypthash + chan).toString(CryptoJS.enc.Hex);
+
       $("#logform").hide();
       $("#chat").show();
 
@@ -239,7 +259,8 @@ Features:
     window.onload = function ()
     {
       var u = readCookie("user");
-      if (u) $('[name=username]').val(u);
+      if (u) 
+        $('[name=username]').val(u);
       var h = window.location.hash;
       if (h != '')
         $('[name=room]').val(h.substring(1));
