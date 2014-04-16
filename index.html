@@ -1,8 +1,8 @@
-
 <head>
   <title>AESchat - Simple and secure encrypted chat</title>
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
   <style type="text/css">
     body {
       margin-top: 70px;
@@ -22,7 +22,7 @@
       background-color: #ecf6ff;
       border: 1px solid #ccc;
       padding: 4px;
-      border-radius:10px;
+      border-radius: 10px;
       margin-bottom: 10px;
     }
   </style>
@@ -59,21 +59,32 @@ Features:
 - Accessible from <a href="https://www.torproject.org/">TOR</a> (url)
 - Easy to generate link addresses
 </pre>
-<script type="text/javascript">
-	document.write("&pbcl; 2014 <n uers=\"znvygb:pguvonhyg@tznvy.pbz\" ery=\"absbyybj\">Puevfgbcur Guvonhyg</n>".replace(/[a-zA-Z]/g, 
-	function(c){return String.fromCharCode((c<="Z"?90:122)>=(c=c.charCodeAt(0)+13)?c:c-26);}));
-</script>
+      <script type="text/javascript">
+        document.write("&pbcl; 2014 <n uers=\"znvygb:pguvonhyg@tznvy.pbz\" ery=\"absbyybj\">Puevfgbcur Guvonhyg</n>".replace(/[a-zA-Z]/g,
+          function (c)
+          {
+            return String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26);
+          }));
+      </script>
     </div>
 
     <div class="row">
       <div class="col-md-12">
 
-        <form id="logform" method="post" action="#" onsubmit="return doChat();">
-          Username:
-          <input name="username" autofocus>
-          <br>Room/Passphrase:
-          <input name="room" value="default">
-          <input id="gobutton" type="submit" value="Go">
+        <form id="logform" class="form-signin" method="post" action="#" onsubmit="return doChat();">
+          <label>Username:</label>
+          <div class="input-group">
+            <span class="input-group-addon"><i class="fa fa-user"></i></span>
+            <input name="username" class="form-control" required autofocus>
+          </div>
+          <br>
+          <label>Room/Passphrase:</label>
+          <div class="input-group">
+            <span class="input-group-addon"><i class="fa fa-lock"></i></span>
+            <input name="room" class="form-control" value="default" required>
+          </div>
+          <br>
+          <input class="btn btn-lg btn-primary" id="gobutton" type="submit" value="Go">
           <div class="alert alert-danger" id="login-error" style="display:none;">
             <button type="button" class="close">x</button>
             Username can't be empty!
@@ -83,8 +94,14 @@ Features:
         <div id="chat">
           <div id="text_area" class="container"></div>
           <form id="chatform" method="post" action="#" onsubmit="return doSend();" autocomplete="off">
-            <input name="textline" class="form-control input-normal">
-            <input type="submit" value="Send">
+            <div class="input-group">
+              <input name="textline" class="form-control input-normal">
+              <span class="input-group-btn">
+            <input class="btn btn-primary" type="submit" value="Send">
+</span>
+            </div>
+            <br>
+            <input class="btn" type="submit" value="Logout" onclick="doLogout();">
             <div id="link"></div>
           </form>
         </div>
@@ -106,6 +123,7 @@ Features:
     var key = "";
     var lastt = 0;
     var bcrypt = new bCrypt();
+    var intervalId = 0;
 
     $('.alert .close').live("click", function (e)
     {
@@ -151,28 +169,34 @@ Features:
 
       var room = r + "AESchat!";
 
-    $('#gobutton').val("Computing encryption key, please wait...");
-    $('#gobutton').prop('disabled', true);
+      $('#gobutton').val("Computing encryption key, please wait...");
+      $('#gobutton').prop('disabled', true);
 
-var bcrypt = new bCrypt();
-bcrypt.hashpw(room, "$2a$10$0gP52fjilt.yQTzi0uY8xu", doChat2);
-return false;
-}
+      var bcrypt = new bCrypt();
+      bcrypt.hashpw(room, "$2a$10$0gP52fjilt.yQTzi0uY8xu", doChat2);
+      return false;
+    }
 
-function doChat2(bcrypthash)
-{
+    function doChat2(bcrypthash)
+    {
       chan = CryptoJS.SHA256(bcrypthash).toString(CryptoJS.enc.Hex);
       key = CryptoJS.SHA256(bcrypthash + chan).toString(CryptoJS.enc.Hex);
 
       $("#logform").hide();
       $("#chat").show();
+      $('#gobutton').val("Go");
+      $('#gobutton').prop('disabled', false);
 
       $('[name=textline]').focus();
 
-      doSendLine(user + " joined the room!");
+      doSendLine(user + " joined the room!", false);
 
-      setInterval(doUpdate, 500);
+      intervalId = setInterval(doUpdate, 500);
 
+      $(window).unload(function ()
+      {
+        doLogout();
+      });
       return false;
     }
     var isupdating = 0;
@@ -206,7 +230,8 @@ function doChat2(bcrypthash)
             var enc = d2[1].replace(/^\s+|\s+$/g, ''); //remove newlines
             var decrypted = CryptoJS.AES.decrypt(enc, key).toString(CryptoJS.enc.Utf8);
             var dt = new Date(d2[0] * 1000);
-            $('#text_area').append(dt.toLocaleTimeString() + '> ' + decrypted + '<br>');
+            var escaped = $('<div/>').text(decrypted).html();
+            $('#text_area').append(dt.toLocaleTimeString() + '> ' + escaped + '<br>');
           }
           $("#text_area").animate(
           {
@@ -220,8 +245,9 @@ function doChat2(bcrypthash)
       });
     }
 
-    function doSendLine(line)
+    function doSendLine(line, sync)
     {
+      sync = typeof sync !== 'undefined' ? sync : true;
       line = CryptoJS.AES.encrypt(line, key).toString();
       $.ajax(
       {
@@ -234,6 +260,7 @@ function doChat2(bcrypthash)
           line: line
         },
         dataType: "json",
+        async: sync,
         success: function (data)
         {
           if (lastt == 0)
@@ -256,10 +283,19 @@ function doChat2(bcrypthash)
       return false;
     }
 
+    function doLogout()
+    {
+      doSendLine(user + " logged out", false);
+      clearInterval(intervalId);
+      $("#chat").hide();
+      $("#logform").show();
+      $('#text_area').empty();
+    }
+
     window.onload = function ()
     {
       var u = readCookie("user");
-      if (u) 
+      if (u)
         $('[name=username]').val(u);
       var h = window.location.hash;
       if (h != '')
