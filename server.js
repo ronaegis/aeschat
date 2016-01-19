@@ -168,7 +168,18 @@ http.createServer(function(request, response) {
       file += "];";
     }
 
-    response.writeHead(200);
+    var extname = path.extname(filename);
+    var contentType = 'text/html';
+    switch (extname) {
+      case '.js':
+        contentType = 'text/javascript';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;     
+    }
+
+    response.writeHead(200, { 'Content-Type': contentType });
     response.write(file, "binary");
     response.end();
   });
