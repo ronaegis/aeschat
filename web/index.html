@@ -50,22 +50,24 @@
       <pre>
 Features:
 - Fast and easy way to securely chat
-- End-to-end encryption
-- Encryption key derived from the room name
+- End-to-end encryption done in the browser
+- Uses <a href="http://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, <a href="http://en.wikipedia.org/wiki/SHA-2">SHA256</a> and <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a>
+- Encryption key derived from the room name using bcrypt
 - No message stored on the server
 - Webpage delivered over HTTPS/SSL
 - Single HTML file, source at <a href="https://github.com/ronaegis/aeschat">GitHub</a>, <a href="javascript:viewthesource()">view source</a>
-- Uses <a href="http://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, <a href="http://en.wikipedia.org/wiki/SHA-2">SHA256</a> and <a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a>
 - Accessible from <a href="https://www.torproject.org/">TOR</a> (url)
-- Easy to generate link addresses
-</pre>
+- Easy to generate link addresses for other people to join
+      </pre>
       <script type="text/javascript">
-        document.write("&pbcl; 2014 <n uers=\"znvygb:pguvonhyg@tznvy.pbz\" ery=\"absbyybj\">Puevfgbcur Guvonhyg</n>".replace(/[a-zA-Z]/g,
+        document.write("&pbcl; 2014 <n uers=\"znvygb:nrfpung666@tznvy.pbz\" ery=\"absbyybj\">Puevfgbcur Guvonhyg</n>".replace(/[a-zA-Z]/g,
           function (c)
           {
             return String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26);
           }));
       </script>
+      - <a href="https://twitter.com/AESchat">Twitter</a> 
+      - <a href="bitcoin:1nSiiB2akR2aUQ8bLrbgJtMYSw7J7SS7m">Donation</a>
     </div>
 
     <div class="row">
@@ -81,7 +83,10 @@ Features:
           <label>Room/Passphrase:</label>
           <div class="input-group">
             <span class="input-group-addon"><i class="fa fa-lock"></i></span>
-            <input name="room" class="form-control" value="default" required>
+            <input name="room" class="form-control" value="default" autocomplete="off" required>
+              <span class="input-group-btn">
+              <button class="btn" id="randomroom" type="button">Random</button>
+              </span>
           </div>
           <br>
           <input class="btn btn-lg btn-primary" id="gobutton" type="submit" value="Go">
@@ -97,11 +102,11 @@ Features:
             <div class="input-group">
               <input name="textline" class="form-control input-normal">
               <span class="input-group-btn">
-            <input class="btn btn-primary" type="submit" value="Send">
-</span>
+                <input class="btn btn-primary" type="submit" value="Send">
+              </span>
             </div>
             <br>
-            <input class="btn" type="submit" value="Logout" onclick="doLogout();">
+            <input class="btn" type="button" value="Logout" onclick="doLogout();">
             <div id="link"></div>
           </form>
         </div>
@@ -113,9 +118,12 @@ Features:
   <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
   <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
   <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
   <script src="sha256.js"></script>
   <script src="bcrypt-min.js"></script>
   <script src="aes.js"></script>
+  <script src="xkcd_pw-min.js"></script>
+  <script src="emo.js"></script>
 
   <script type="text/javascript">
     var user = "";
@@ -124,16 +132,14 @@ Features:
     var lastt = 0;
     var bcrypt = new bCrypt();
     var intervalId = 0;
+    var isUpdating = 0;
 
-    $('.alert .close').live("click", function (e)
-    {
-      $(this).parent().hide();
-    });
-    $('#aboutlink').click(function ()
-    {
-      $("#jumbotron").slideToggle();
-      return false;
-    });
+    function urlify(text) {
+      var urlRegex = /(https?:\/\/[^\s]+)/g;
+      return text.replace(urlRegex, function(url) {
+        return '<a href="' + url + '" target="_blank">' + url + '</a>';
+      })
+    }
 
     function viewthesource()
     {
@@ -165,7 +171,7 @@ Features:
       document.cookie = "user=" + escape(user) + "; path=/";
 
       var r = document.getElementById("logform").room.value;
-      $('#link').replaceWith('<a href="#' + encodeURIComponent(r) + '">Link</a>');
+      $('#link').replaceWith('<a href="#' + encodeURIComponent(r) + '">Share room</a>');
 
       var room = r + "AESchat!";
 
@@ -183,6 +189,7 @@ Features:
       key = CryptoJS.SHA256(bcrypthash + chan).toString(CryptoJS.enc.Hex);
 
       $("#logform").hide();
+      $('#text_area').empty();
       $("#chat").show();
       $('#gobutton').val("Go");
       $('#gobutton').prop('disabled', false);
@@ -199,22 +206,22 @@ Features:
       });
       return false;
     }
-    var isupdating = 0;
 
     function doUpdate()
     {
-      if (isupdating) return;
-      isupdating = 1;
+      if (isUpdating) return;
+      isUpdating = 1;
       $.ajax(
       {
         type: "POST",
-        url: "chat.php",
+        url: "/server",
+        contentType: 'application/json',
         data:
-        {
+        JSON.stringify({
           function: 'get',
           chan: chan,
           t: lastt
-        },
+        }),
         dataType: "json",
         success: function (data)
         {
@@ -231,7 +238,7 @@ Features:
             var decrypted = CryptoJS.AES.decrypt(enc, key).toString(CryptoJS.enc.Utf8);
             var dt = new Date(d2[0] * 1000);
             var escaped = $('<div/>').text(decrypted).html();
-            $('#text_area').append(dt.toLocaleTimeString() + '> ' + escaped + '<br>');
+            $('#text_area').append(dt.toLocaleTimeString() + '> ' + encodeEmoticons(urlify(escaped)) + '<br>');
           }
           $("#text_area").animate(
           {
@@ -240,7 +247,7 @@ Features:
         },
         complete: function ()
         {
-          isupdating = 0;
+          isUpdating = 0;
         }
       });
     }
@@ -252,13 +259,13 @@ Features:
       $.ajax(
       {
         type: "POST",
-        url: "chat.php",
+        url: "/server",
         data:
-        {
+        JSON.stringify({
           function: 'post',
           chan: chan,
           line: line
-        },
+        }),
         dataType: "json",
         async: sync,
         success: function (data)
@@ -287,11 +294,29 @@ Features:
     {
       doSendLine(user + " logged out", false);
       clearInterval(intervalId);
+      lastt = 0;
       $("#chat").hide();
       $("#logform").show();
       $('#text_area').empty();
     }
 
+    $('.alert .close').live("click", function (e)
+    {
+      $(this).parent().hide();
+    });
+
+    $('#aboutlink').click(function ()
+    {
+      $("#jumbotron").slideToggle();
+      return false;
+    });
+
+    // Random room button
+    $('#randomroom').on('click', function (e) {
+      document.getElementById("logform").room.value = xkcd_pw_gen();
+    }) 
+
+    // Set default username/room on load
     window.onload = function ()
     {
       var u = readCookie("user");
@@ -301,6 +326,7 @@ Features:
       if (h != '')
         $('[name=room]').val(h.substring(1));
     };
+
   </script>
 
 </body>
