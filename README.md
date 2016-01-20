@@ -31,7 +31,9 @@ Run
 
 - Install Node.js
 - Launch server with `node server.js`
-- Connect to http://localhost:8888/
+- Browse to http://localhost:8888/
+- The server is bound to the localhost interface by default. Modify the `server.js` setting to enable other interfaces
+- You can also use nginx or an Apache reverse proxy to provide the service to an outside interface or to have it delivered via SSL
 
 License
 =======
