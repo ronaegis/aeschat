@@ -11,3 +11,5 @@ function encodeEmoticons(str)
   }
   return str;
 }
+
+var emoticons = ["annoyed","bignose","blush","confused","cool","cries","dies","eeemmph","eek","fufu","gross","hihi","kikik","lol","mad","music","nyu","nyuuu","question","rolleyes","sad","sleep","sleepy","smile","sorry","sure","surprise","woooot","woot","yawn"];
