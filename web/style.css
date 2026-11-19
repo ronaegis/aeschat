@@ -111,3 +111,29 @@ input:focus { outline: none; border-color: #66afe9; box-shadow: 0 0 6px rgba(102
 }
 #text_area .sys { color: #777; font-style: italic; }
 #text_area img { vertical-align: middle; }
+
+#how {
+  margin-top: 40px;
+  padding-top: 8px;
+  border-top: 1px solid #ddd;
+  max-width: 760px;
+}
+#how h2 { font-size: 22px; font-weight: 500; margin: 28px 0 10px; }
+#how h3 { font-size: 16px; margin: 22px 0 8px; }
+#how li { margin-bottom: 8px; }
+#how ol, #how ul { padding-left: 22px; }
+#how pre {
+  background: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 13px;
+  overflow-x: auto;
+}
+#how table { width: 100%; border-collapse: collapse; }
+#how th, #how td {
+  text-align: left;
+  vertical-align: top;
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid #ddd;
+}
