@@ -231,6 +231,7 @@
 
     el('link').href = '#' + encodeURIComponent(roomName);
     el('logform').hidden = true;
+    el('how').hidden = true;
     el('text_area').textContent = '';
     el('chat').hidden = false;
     el('textline').focus();
@@ -331,6 +332,7 @@
     names = {};
     el('chat').hidden = true;
     el('logform').hidden = false;
+    el('how').hidden = false;
     el('text_area').textContent = '';
   }
 

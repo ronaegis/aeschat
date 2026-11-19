@@ -58,6 +58,132 @@ Good to know:
       <div class="alert" id="login-error" hidden></div>
     </form>
 
+    <section id="how">
+      <h2>How it works without a server</h2>
+      <p>
+        AESchat is a set of static files. Nothing runs on the host that serves
+        this page: there is no chat server, no database and no account. Your
+        browser does all the work and talks straight to the other browsers in
+        the room.
+      </p>
+      <ol>
+        <li>
+          <b>The room name becomes keys.</b> Your browser turns the room name
+          into a room id and two secret keys. The name itself never leaves
+          your browser.
+        </li>
+        <li>
+          <b>Browsers find each other.</b> Two browsers cannot connect without
+          an introduction, so each one posts a short encrypted connection
+          offer to a few public <a href="https://github.com/nostr-protocol/nostr">Nostr</a>
+          relays, using <a href="https://github.com/dmotz/trystero">Trystero</a>.
+          Nobody involved with AESchat runs those relays, and they never
+          receive a chat message.
+        </li>
+        <li>
+          <b>They connect directly.</b> Once introduced, the browsers open a
+          WebRTC data channel between themselves. From then on every message
+          travels from browser to browser, with nothing in the middle.
+        </li>
+        <li>
+          <b>History comes from the room.</b> When you join, someone already
+          in the room hands you the last 32 lines. Nothing is stored anywhere
+          else: when the last person closes the page, the conversation is gone.
+        </li>
+      </ol>
+
+      <h3>What third parties can see</h3>
+      <table>
+        <tr><th>Who</th><th>What they see</th><th>What they never see</th></tr>
+        <tr>
+          <td>The host of this page</td>
+          <td>That your IP address loaded the page</td>
+          <td>Room names, keys, messages</td>
+        </tr>
+        <tr>
+          <td>Public relays</td>
+          <td>Your IP address, an id derived from the room, encrypted connection offers</td>
+          <td>Room names, keys, messages, usernames</td>
+        </tr>
+        <tr>
+          <td>STUN servers (Google, Cloudflare)</td>
+          <td>Your IP address, when your browser asks what its public address is</td>
+          <td>Anything about the room</td>
+        </tr>
+        <tr>
+          <td>People in your room</td>
+          <td>Your messages, username and IP address</td>
+          <td></td>
+        </tr>
+      </table>
+
+      <h2>The encryption in detail</h2>
+      <p>
+        Everything is done in your browser with its built-in cryptography
+        (<a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API">WebCrypto</a>),
+        plus bcrypt in JavaScript.
+      </p>
+
+      <h3>From room name to keys</h3>
+      <pre>
+h         = bcrypt(room name + "AESchat!", cost 10, fixed salt)
+room id   = SHA-256(h)
+handshake = SHA-256(h + room id + "signal")
+chat key  = SHA-256(h + room id)             256-bit AES key</pre>
+      <ul>
+        <li>bcrypt is slow on purpose (1024 rounds), which makes guessing room names expensive.</li>
+        <li>The room id is what browsers use to find each other. It cannot be turned back into the room name or the keys.</li>
+        <li>The chat key is held by the browser as a non-extractable key and is never sent anywhere.</li>
+      </ul>
+
+      <h3>Three layers protect a message</h3>
+      <ol>
+        <li>
+          <b>Message encryption.</b> Each chat line, each username and the
+          history are encrypted with AES-256-GCM using the chat key and a
+          fresh random 96-bit nonce. GCM also authenticates: a message that
+          was modified, or encrypted with another key, is rejected.
+        </li>
+        <li>
+          <b>Connection encryption.</b> The WebRTC channel between two
+          browsers is encrypted with DTLS using keys made for that connection
+          only. Each browser also creates a throwaway ECDSA P-256 identity per
+          session, and Trystero checks it against the connection's
+          certificate so nobody can sit in the middle.
+        </li>
+        <li>
+          <b>Handshake encryption.</b> The connection offers posted to the
+          relays are encrypted with AES-256-GCM, using a key stretched from
+          the handshake password with PBKDF2-SHA256 (600,000 rounds). Without
+          the room name, a relay can neither read an offer nor join the room.
+        </li>
+      </ol>
+
+      <h3>Choosing a good room password</h3>
+      <p>
+        The room name is both the address of the room and its password, so it
+        has to be hard to guess, not easy to remember. The safest choice is
+        the Random button, which picks six words with your browser's secure
+        random generator. If you make your own, use at least six unrelated
+        words or 14 random characters, and avoid anything a person or a
+        program could guess: names, dates, places, song or film quotes,
+        keyboard patterns, or a password you use elsewhere. Use a new room for
+        each conversation, since anyone who ever had the name can come back.
+        Send the name or the "Share room" link only through a channel you
+        already trust, and never post it in public: the link contains the
+        room name, so whoever sees the link can join.
+      </p>
+
+      <h3>Limits you should know</h3>
+      <ul>
+        <li><b>The room name is the only secret.</b> Anyone who knows or guesses it can join and read. The Random button makes a six-word name with about 65 bits of randomness; share it through a channel you trust.</li>
+        <li><b>The chat key never changes.</b> Every message in a room uses the same key, for as long as the room name is used. A conversation recorded off the network still stays protected if the name leaks later, because each direct connection also has its own one-time DTLS keys.</li>
+        <li><b>The bcrypt salt is fixed</b>, so a short or common room name can be guessed from its room id. Do not use one.</li>
+        <li><b>Direct means visible.</b> People in the same room can see each other's IP address.</li>
+        <li><b>You trust the page.</b> Like any web app, whoever serves these files could change them. The <a href="https://github.com/ronaegis/aeschat">source</a> is small enough to read and to host yourself.</li>
+      </ul>
+    </section>
+
     <section id="chat" hidden>
       <div id="status"></div>
       <div id="text_area"></div>
