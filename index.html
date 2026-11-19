@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src wss:; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>AESchat - Simple and secure encrypted chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="navbar">
+    <div class="container">
+      <a href="./" class="brand">AESchat - Simple and secure encrypted chat</a>
+      <a id="aboutlink" href="#">About</a>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <section id="about" hidden>
+      <p>About AESchat</p>
+      <pre>
+Features:
+- Fast and easy way to securely chat
+- No server: messages travel directly from browser to browser (WebRTC)
+- End-to-end encryption done in the browser
+- Uses <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a>, <a href="https://en.wikipedia.org/wiki/SHA-2">SHA256</a> and <a href="https://en.wikipedia.org/wiki/Galois/Counter_Mode">AES-GCM</a>
+- Encryption key derived from the room name using bcrypt
+- No message stored anywhere, history comes from the people in the room
+- Source code at <a href="https://github.com/ronaegis/aeschat">GitHub</a>
+- Easy to generate link addresses for other people to join
+
+Good to know:
+- People in the same room can see each other's IP address
+- Public relays are only used to introduce browsers to each other
+- Pick a random room name: anyone who guesses the name can join
+      </pre>
+      <p>
+        <span id="credit"></span>
+        - <a href="https://twitter.com/AESchat">Twitter</a>
+        - <a href="bitcoin:1nSiiB2akR2aUQ8bLrbgJtMYSw7J7SS7m">Donation</a>
+      </p>
+    </section>
+
+    <form id="logform" autocomplete="off">
+      <label for="username">Username:</label>
+      <input id="username" name="username" maxlength="32" required autofocus>
+
+      <label for="room">Room/Passphrase:</label>
+      <div class="row">
+        <input id="room" name="room" autocomplete="off" required>
+        <button class="btn" id="randomroom" type="button">Random</button>
+      </div>
+
+      <button class="btn primary large" id="gobutton" type="submit">Go</button>
+      <div class="alert" id="login-error" hidden></div>
+    </form>
+
+    <section id="chat" hidden>
+      <div id="status"></div>
+      <div id="text_area"></div>
+      <form id="chatform" autocomplete="off">
+        <div class="row">
+          <input id="textline" name="textline" maxlength="1000">
+          <button class="btn primary" type="submit">Send</button>
+        </div>
+        <div class="row actions">
+          <button class="btn" id="logout" type="button">Logout</button>
+          <a id="link" href="#">Share room</a>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <script src="bcrypt-min.js"></script>
+  <script src="xkcd_pw-min.js"></script>
+  <script src="emo.js"></script>
+  <script src="trystero.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
